@@ -32,7 +32,6 @@ function getFilesInfo () {
           const fileSize = stats.size;
 
           stdout.write(`${fileName} - ${fileExt} - ${fileSize} bytes\n`);
-          // console.log(path.parse(filePath));
         }
       });
     });

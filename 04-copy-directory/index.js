@@ -19,10 +19,8 @@ async function copyDir () {
     // В цикле перебираю имена файлов для создания пути исходного файла и пути назначения
     // Используя созданные пути, выполняю копирование
     filesNames.forEach((fileName) => {
-      console.log(fileName);
       const fileSourcePath = path.join(sourcePath, fileName);
       const fileDestPath = path.join(destinationPath, fileName);
-      console.log(fileSourcePath, fileDestPath);
       copyFile(fileSourcePath, fileDestPath);
     });
     stdout.write('Копирование завершено');

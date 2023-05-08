@@ -1,7 +1,7 @@
-console.log('Читаю файл:');
-
 // Используя диструктуризацию получаю стандартный поток вывода
 const { stdout } = process;
+
+stdout.write('Читаю файл:\n');
 
 // Подключаем модули
 const path = require('path');
