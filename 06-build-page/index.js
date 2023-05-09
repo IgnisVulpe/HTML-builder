@@ -206,6 +206,27 @@ async function createNewHTML(
 
   console.log(elementsHTML);
 
+  templateHTMLString = await (function () {
+    return new Promise((resolve, reject) => {
+      const templateHTMLReadStream = fs.createReadStream(sourceHTMLPath, 'utf-8');
+      const templateHTMLDataStringArr = [];
+
+      templateHTMLReadStream.on('data', (data) => {
+        templateHTMLDataStringArr.push(data.toString());
+      });
+
+      templateHTMLReadStream.on('end', () => {
+        resolve(templateHTMLDataStringArr.join(''));
+      });
+
+      templateHTMLReadStream.on('error', (err) => {
+        reject(err);
+      });
+    });
+  })();
+
+  console.log(templateHTMLString);
+
 }
 
 
