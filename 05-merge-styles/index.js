@@ -4,8 +4,7 @@ const { stdout } = process;
 // Подключаю модули
 const path = require('path');
 const fs = require('fs');
-const { mkdir, copyFile, constants, rm, readdir, access } = require('node:fs/promises');
-const {json} = require("stream/consumers");
+const { constants, rm, readdir, access } = require('node:fs/promises');
 
 // Прописала пути для папки с исходными стилями и для бандла
 const sourcePath = path.join(__dirname, 'styles');
