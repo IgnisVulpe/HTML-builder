@@ -9,6 +9,7 @@ const { constants, rm, readdir, access, mkdir, copyFile} = require('node:fs/prom
 // Прописала пути для папки с исходными стилями и для бандла
 const sourceCSSPath = path.join(__dirname, 'styles');
 const sourceAssetsPath = path.join(__dirname, 'assets');
+const destinationCSSPath = path.join(__dirname, 'project-dist', 'bundle.css');
 const destinationSitePath = path.join(__dirname, 'project-dist');
 const destinationAssetsPath = path.join(destinationSitePath, 'assets');
 
@@ -23,14 +24,21 @@ async function buildSite (
   // если нет просто создать
   await makeDelDir (destinationSitePath);
 
+  stdout.write('Папка для файлов сайта содана!\n');
+
   // Скопировать ассеты
   await copyAssets (
     sourceAssetsPath,
     destinationAssetsPath,
   );
 
+  stdout.write('Ассетты успешно скопированы!\n');
+
   // Сшить все файты css и положить в одну папку
-  // mergeCSS();
+  await mergeCSS(
+    sourceCSSPath,
+    destinationCSSPath,
+  );
 
   // Обработать HTML шаблон, собрав по нему из компонентов новый файл и положить его в нужную папку
   // createNewHTML();
@@ -100,6 +108,38 @@ async function copyAssets (
       }
     });
 
+  }
+}
+
+async function mergeCSS(sourcePath, destinationPath) {
+  try {
+    // Открываю поток на запись в файл бандла
+    const bundleWriteStream = fs.createWriteStream(destinationPath, 'utf-8');
+    // Получаю массив имен исходных CSS файлов
+    const sourceFilesNames = await readdir(sourcePath, 'utf-8');
+
+    sourceFilesNames.forEach((fileName) => {
+      const fileSourcePath = path.join(sourcePath, fileName);
+      fs.stat(fileSourcePath, (err, stats) => {
+        if (err) {
+          throw err;
+        }
+
+        if ((stats.isFile()) && (path.parse(fileSourcePath).ext === '.css')) {
+          const sourceFileReadStream = fs.createReadStream(fileSourcePath, 'utf-8');
+          sourceFileReadStream.pipe(bundleWriteStream);
+          sourceFileReadStream.on('data', () => {
+            bundleWriteStream.write('\n');
+          });
+          stdout.write(`Файл ${fileName} добавлен\n`);
+        } else {
+          stdout.write(`Файл ${fileName} проигнорирован\n`);
+        }
+      });
+    });
+
+  } catch (err) {
+    stdout.write(err.toString());
   }
 }
 
