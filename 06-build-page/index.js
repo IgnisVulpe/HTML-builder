@@ -1,4 +1,6 @@
 // Используя диструктуризацию получаю стандартный поток вывода
+// noinspection DuplicatedCode
+
 const { stdout } = process;
 
 // Подключаю модули
@@ -7,12 +9,14 @@ const fs = require('fs');
 const { constants, rm, readdir, access, mkdir, copyFile} = require('node:fs/promises');
 
 // Прописала пути для папки с исходными стилями и для бандла
+// офигенная лесенка :)
 const sourceCSSPath = path.join(__dirname, 'styles');
+const sourceHTMLPath = path.join(__dirname, 'template.html');
 const sourceAssetsPath = path.join(__dirname, 'assets');
 const destinationCSSPath = path.join(__dirname, 'project-dist', 'bundle.css');
 const destinationSitePath = path.join(__dirname, 'project-dist');
 const destinationAssetsPath = path.join(destinationSitePath, 'assets');
-
+const sourceElementsHTMLPath = path.join(__dirname, 'components');
 
 async function buildSite (
   sourceCSSPath,
@@ -41,7 +45,11 @@ async function buildSite (
   );
 
   // Обработать HTML шаблон, собрав по нему из компонентов новый файл и положить его в нужную папку
-  // createNewHTML();
+  await createNewHTML(
+    sourceHTMLPath,
+    sourceElementsHTMLPath,
+    destinationSitePath,
+  );
 }
 
 async function makeDelDir (destinationSitePath) {
@@ -142,6 +150,64 @@ async function mergeCSS(sourcePath, destinationPath) {
     stdout.write(err.toString());
   }
 }
+
+async function createNewHTML(
+  sourceHTMLPath,
+  sourceElementsHTMLPath,
+  destinationSitePath,
+) {
+  // Объект для хранения компанентов HTML файла
+  // Каждый ключ объекта - это имя компонента, а значение - данные из файла компонента в виде строки
+  const elementsHTML = {};
+  // Код HTML шаблона, считанный из файла шаблона и хранящийся как строка
+  let templateHTMLString = '';
+  // Переменная для хранения итогового HTML файла ввиде строки, подготовленного к записи в файл
+  let indexHTMLString = '';
+
+  // В массив получаем имена компонентов HTML файла
+  const elementsNames = await readdir(sourceElementsHTMLPath, 'utf-8');
+
+  for (const name of elementsNames) {
+    const elementPath = path.join(sourceElementsHTMLPath, name);
+
+    await (function () {
+      return new Promise((resolve, reject) => {
+        const elementReadStream = fs.createReadStream(elementPath,'utf-8');
+        const elementStringArr = [];
+
+        elementReadStream.on('data', (data) => {
+          elementStringArr.push(data.toString());
+        });
+
+        elementReadStream.on('end', () => {
+          resolve(elementStringArr);
+        });
+
+        elementReadStream.on('error', (err) => {
+          reject(err);
+        });
+      });
+    })().then(
+
+      (elementStringArr) => {
+        return new Promise((resolve) => {
+          const onlyName = path.parse(elementPath).name;
+          elementsHTML[onlyName] = elementStringArr.join('');
+          resolve();
+        });
+      },
+
+      (err) => {
+        stdout.write(err.toString());
+      },
+    );
+
+  }
+
+  console.log(elementsHTML);
+
+}
+
 
 buildSite (
   sourceCSSPath,
