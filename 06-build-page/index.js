@@ -13,7 +13,7 @@ const { constants, rm, readdir, access, mkdir, copyFile} = require('node:fs/prom
 const sourceCSSPath = path.join(__dirname, 'styles');
 const sourceHTMLPath = path.join(__dirname, 'template.html');
 const sourceAssetsPath = path.join(__dirname, 'assets');
-const destinationCSSPath = path.join(__dirname, 'project-dist', 'bundle.css');
+const destinationCSSPath = path.join(__dirname, 'project-dist', 'style.css');
 const destinationSitePath = path.join(__dirname, 'project-dist');
 const destinationAssetsPath = path.join(destinationSitePath, 'assets');
 const sourceElementsHTMLPath = path.join(__dirname, 'components');
@@ -50,6 +50,10 @@ async function buildSite (
     sourceElementsHTMLPath,
     destinationSitePath,
   );
+
+  stdout.write('HTML файл успешно построен!\n');
+
+  stdout.write('Работа успешно завершена!\n');
 }
 
 async function makeDelDir (destinationSitePath) {
@@ -163,13 +167,23 @@ async function createNewHTML(
   let templateHTMLString = '';
   // Переменная для хранения итогового HTML файла ввиде строки, подготовленного к записи в файл
   let indexHTMLString = '';
+  // Путь конкретно до файла `index.html`, включая имя файла.
+  const indexHTMLPath = path.join(destinationSitePath, 'index.html');
 
   // В массив получаем имена компонентов HTML файла
   const elementsNames = await readdir(sourceElementsHTMLPath, 'utf-8');
 
+  // Прохожу по именам компонентов из массива имент компонентов
   for (const name of elementsNames) {
+    // Получаю путь до текущего компонента
     const elementPath = path.join(sourceElementsHTMLPath, name);
 
+    // Создаю self-executed функцию чтобы вернуть и нее promise в котором я получаю HTML код
+    // из текущего компонента используя поток чтения и его слушатели
+    // Promise из self-executed функции обрабатываю в then в обработчике возврящая еще один
+    // promise, который будет ждать await. В последнем промисе, преобразую массив строк из
+    // компонента в строку и кладу ее в объект с компонентами, создавая новый ключ по имени
+    // текущего компонента
     await (function () {
       return new Promise((resolve, reject) => {
         const elementReadStream = fs.createReadStream(elementPath,'utf-8');
@@ -201,11 +215,10 @@ async function createNewHTML(
         stdout.write(err.toString());
       },
     );
-
   }
 
-  console.log(elementsHTML);
-
+  // используя await и self-executed функцию, считываю через поток чтения HTML шаблон, управляю
+  // промисем через события потока чтения
   templateHTMLString = await (function () {
     return new Promise((resolve, reject) => {
       const templateHTMLReadStream = fs.createReadStream(sourceHTMLPath, 'utf-8');
@@ -225,10 +238,35 @@ async function createNewHTML(
     });
   })();
 
-  console.log(templateHTMLString);
+  // Перекладываю шаблон HTML в виде строки в переменную для храения HTML кода итогового HTML файла
+  indexHTMLString = templateHTMLString;
 
+  // Получаю массив ключей из объекта с компонетами HTML кода
+  // Ключ = Имя компонента
+  const elementsKeys = Object.keys(elementsHTML);
+
+  // Испульзая цикл, перебираю имена компонентов. Внутри цикла для каждого имени компонента
+  // создаю регулярное выражение, далее использую метод replace и регулярное выражение,
+  // заменяю все шаблонные строки на компоненты
+  for (const elementName of elementsKeys) {
+    const regularForComponent = new RegExp(`\\{\\{${elementName}\\}\\}`, 'g');
+    indexHTMLString = indexHTMLString.replace(regularForComponent, elementsHTML[elementName]);
+  }
+
+  // Ожидаю сразу промис (оказывается так можно), в котором происходит запис итогового HTML кода в
+  // итоговый HTML файл по нужному пути
+  await new Promise((resolve, reject) => {
+    const indexHTMLWriteStream = fs.createWriteStream(indexHTMLPath, 'utf-8');
+
+    indexHTMLWriteStream.on('error', (err) => {
+      stdout.write(err.toString());
+      reject(err);
+    });
+
+    indexHTMLWriteStream.write(indexHTMLString);
+    resolve();
+  });
 }
-
 
 buildSite (
   sourceCSSPath,
@@ -236,3 +274,6 @@ buildSite (
   destinationSitePath,
   destinationAssetsPath,
 ).then(() => {});
+
+//полный ждец :)
+//Спасибо за проверку!
